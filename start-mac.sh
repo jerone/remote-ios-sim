@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# start-mac.sh — Start the iOS Simulator + streaming agent on the Mac.
+#
+# The Expo dev server runs on Windows. This script only manages the Mac side.
+#
+# Usage (on the Mac, from the ios-sim-remote folder):
+#   bash start-mac.sh
+#
+# Optional: specify a simulator device name:
+#   bash start-mac.sh "iPhone 16"
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+AGENT="$SCRIPT_DIR/mac-agent/agent.py"
+DEVICE="${1:-iPhone 15}"
+
+# ── Check dependencies ────────────────────────────────────────────────────────
+if ! command -v python3 &>/dev/null; then
+  echo "❌  python3 not found. Install it with: brew install python"
+  exit 1
+fi
+
+if ! python3 -c "import websockets" &>/dev/null; then
+  echo "📦  Installing mac-agent dependencies…"
+  pip3 install -r "$SCRIPT_DIR/mac-agent/requirements.txt"
+fi
+
+# ── Boot simulator ────────────────────────────────────────────────────────────
+echo "🚀  Booting simulator: $DEVICE"
+xcrun simctl boot "$DEVICE" 2>/dev/null || true
+open -a Simulator
+
+# ── Show connection info ──────────────────────────────────────────────────────
+MAC_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "unknown")
+
+echo ""
+echo "┌─────────────────────────────────────────────────────────────┐"
+echo "│              iOS Simulator Remote — Mac Agent               │"
+echo "├─────────────────────────────────────────────────────────────┤"
+echo "│  This Mac's IP :  $MAC_IP"
+echo "│                                                             │"
+echo "│  On Windows:                                               │"
+echo "│    1. npx expo start                                       │"
+echo "│    2. Open windows-client/index.html in a browser          │"
+echo "│    3. Connect to this Mac's IP                             │"
+echo "│    4. Paste the exp:// URL and click 'Open in Simulator'   │"
+echo "└─────────────────────────────────────────────────────────────┘"
+echo ""
+
+# ── Start streaming agent ─────────────────────────────────────────────────────
+trap 'echo ""; echo "Stopping agent…"; exit 0' INT TERM
+
+python3 "$AGENT"

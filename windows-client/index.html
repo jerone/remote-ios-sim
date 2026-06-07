@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>iOS Simulator Remote — Expo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Top bar ───────────────────────────────────────────────── */
+    header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 14px;
+      background: #111;
+      border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #888;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      flex: 1;
+    }
+
+    #host-input {
+      background: #252525;
+      border: 1px solid #3a3a3a;
+      border-radius: 6px;
+      color: #fff;
+      padding: 5px 10px;
+      font-size: 13px;
+      width: 190px;
+    }
+
+    #connect-btn {
+      background: #0a84ff;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 5px 14px;
+    }
+    #connect-btn:hover { background: #0070d8; }
+
+    #status { font-size: 12px; min-width: 150px; color: #888; }
+    #fps    { font-size: 11px; color: #555; min-width: 44px; text-align: right; }
+
+    /* ── Expo URL bar ─────────────────────────────────────────── */
+    #expo-bar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      background: #0f0f1a;
+      border-bottom: 1px solid #1e1e3a;
+      flex-shrink: 0;
+    }
+
+    .expo-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #6c47ff;
+      white-space: nowrap;
+    }
+
+    #expo-url-input {
+      flex: 1;
+      background: #181828;
+      border: 1px solid #3a2f6a;
+      border-radius: 6px;
+      color: #c4b5fd;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-family: monospace;
+    }
+    #expo-url-input::placeholder { color: #4a3f6a; }
+
+    #open-btn {
+      background: #6c47ff;
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 14px;
+      white-space: nowrap;
+    }
+    #open-btn:hover { background: #5a38e0; }
+
+    /* ── Expo action toolbar ───────────────────────────────────── */
+    #toolbar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: #141414;
+      border-bottom: 1px solid #222;
+      flex-shrink: 0;
+    }
+
+    .action-btn {
+      background: #252525;
+      border: 1px solid #333;
+      border-radius: 7px;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 5px 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.15s;
+      white-space: nowrap;
+    }
+    .action-btn:hover  { background: #333; color: #fff; }
+    .action-btn.expo   { border-color: #6c47ff; color: #a78bfa; }
+    .action-btn.expo:hover { background: #2a1f4a; }
+
+    .sep { width: 1px; height: 20px; background: #2a2a2a; margin: 0 2px; }
+
+    kbd {
+      background: #1a1a1a;
+      border: 1px solid #444;
+      border-radius: 3px;
+      font-size: 9px;
+      padding: 1px 4px;
+      color: #666;
+    }
+
+    /* ── Canvas area ───────────────────────────────────────────── */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      width: 100%;
+      min-height: 0;
+    }
+
+    #sim-canvas {
+      border-radius: 12px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-drag: none;
+      max-height: 100%;
+      max-width: 100%;
+    }
+
+    #placeholder {
+      text-align: center;
+      color: #444;
+    }
+    #placeholder svg  { opacity: 0.12; margin-bottom: 14px; }
+    #placeholder p    { font-size: 13px; line-height: 1.7; }
+    #placeholder code { background: #222; border-radius: 4px; padding: 2px 6px; font-size: 12px; }
+
+    /* ── Shake flash effect ────────────────────────────────────── */
+    @keyframes shake-anim {
+      0%,100% { transform: translateX(0); }
+      20%     { transform: translateX(-6px) rotate(-1deg); }
+      40%     { transform: translateX(6px)  rotate(1deg); }
+      60%     { transform: translateX(-4px) rotate(-0.5deg); }
+      80%     { transform: translateX(4px)  rotate(0.5deg); }
+    }
+    .shaking { animation: shake-anim 0.4s ease; }
+  </style>
+</head>
+<body>
+
+  <!-- Top connection bar -->
+  <header>
+    <h1>📱 iOS Simulator Remote</h1>
+    <input id="host-input" type="text" placeholder="Mac IP — e.g. 192.168.1.42" />
+    <button id="connect-btn">Connect</button>
+    <span id="status">Not connected</span>
+    <span id="fps"></span>
+  </header>
+
+  <!-- Expo URL bar (paste LAN URL from Windows terminal) -->
+  <div id="expo-bar">
+    <span class="expo-label">⚡ Expo</span>
+    <input id="expo-url-input" type="text" placeholder="exp://192.168.1.x:8081  (copy from npx expo start output)" />
+    <button id="open-btn" onclick="openInSimulator()">Open in Simulator</button>
+  </div>
+
+  <!-- Expo action toolbar -->
+  <div id="toolbar">
+    <button class="action-btn expo" onclick="sendAction('shake')" title="Opens Expo dev menu">
+      📳 Dev Menu <kbd>D</kbd>
+    </button>
+    <button class="action-btn expo" onclick="sendAction('reload')" title="Reload JS bundle">
+      🔄 Reload <kbd>R</kbd>
+    </button>
+    <div class="sep"></div>
+    <button class="action-btn" onclick="sendAction('home')"    title="Home button">🏠 Home <kbd>H</kbd></button>
+    <button class="action-btn" onclick="sendAction('lock')"    title="Lock screen">🔒 Lock <kbd>L</kbd></button>
+    <div class="sep"></div>
+    <button class="action-btn" onclick="sendAction('rotateL')" title="Rotate left">↺ Left</button>
+    <button class="action-btn" onclick="sendAction('rotateR')" title="Rotate right">↻ Right</button>
+  </div>
+
+  <main>
+    <div id="placeholder">
+      <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1">
+        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+        <line x1="12" y1="18" x2="12.01" y2="18"/>
+      </svg>
+      <p>
+        <strong>On Windows</strong> — run your Expo project:<br/>
+        <code>npx expo start</code><br/><br/>
+        <strong>On the Mac</strong> — start the agent:<br/>
+        <code>bash start-mac.sh</code><br/><br/>
+        Then enter the Mac's IP above, click <strong>Connect</strong>,<br/>
+        paste the <code>exp://</code> URL from your terminal and click <strong>Open in Simulator</strong>.
+      </p>
+    </div>
+    <canvas id="sim-canvas" style="display:none;"></canvas>
+  </main>
+
+  <script src="client.js"></script>
+</body>
+</html>
+
