@@ -30,17 +30,20 @@ function connect() {
   const host = hostInput.value.trim();
   if (!host) return;
 
+  showCanvasPreview("Connecting to simulator...");
   setStatus("Connecting…", "orange");
   ws = new WebSocket(`ws://${host}:9001`);
 
   ws.onopen = () => {
     setStatus("Connected ✓", "limegreen");
     connectBtn.textContent = "Disconnect";
+    showCanvasPreview("Connected. Waiting for first frame...");
   };
 
   ws.onclose = () => {
     setStatus("Disconnected", "tomato");
     connectBtn.textContent = "Connect";
+    resetSimulatorView();
     ws = null;
   };
 
@@ -97,6 +100,39 @@ function renderFrame(msg) {
     frameCount  = 0;
     lastFpsTime = now;
   }
+}
+
+function showCanvasPreview(text) {
+  if (!revealed) {
+    placeholder.style.display = "none";
+    canvas.style.display = "block";
+    revealed = true;
+  }
+
+  // Draw a lightweight placeholder frame so users see the simulator area immediately.
+  if (canvas.width < 10 || canvas.height < 10) {
+    const maxH = window.innerHeight - 110;
+    const maxW = window.innerWidth - 32;
+    const fallbackW = Math.min(maxW, Math.round(maxH * (9 / 19.5)));
+    const fallbackH = Math.round(fallbackW * (19.5 / 9));
+    canvas.width = Math.max(200, fallbackW);
+    canvas.height = Math.max(320, fallbackH);
+  }
+
+  ctx.fillStyle = "#0f0f0f";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#6f6f6f";
+  ctx.font = "14px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+}
+
+function resetSimulatorView() {
+  placeholder.style.display = "block";
+  canvas.style.display = "none";
+  revealed = false;
+  fpsEl.textContent = "";
 }
 
 // ─── Send helpers ──────────────────────────────────────────────────────────────
