@@ -21,11 +21,10 @@ if ! command -v node &>/dev/null; then
   exit 1
 fi
 
-if [ ! -d "$AGENT_DIR/node_modules" ]; then
-  echo "📦  Installing mac-agent dependencies…"
-  cd "$AGENT_DIR"
-  npm install
+if [ ! -d "$SCRIPT_DIR/node_modules" ]; then
+  echo "📦  Installing project dependencies…"
   cd "$SCRIPT_DIR"
+  npm install
 fi
 
 # ── Boot simulator ────────────────────────────────────────────────────────────
@@ -54,4 +53,4 @@ echo ""
 trap 'echo ""; echo "Stopping agent…"; exit 0' INT TERM
 
 cd "$AGENT_DIR"
-npm start
+node agent.js

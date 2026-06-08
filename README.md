@@ -20,16 +20,24 @@ npx expo start                           start-mac.sh
 
 ### 1 — Mac (one time)
 
-Copy `ios-sim-remote/` to your Mac, then run:
+Copy `ios-sim-remote/` to your Mac, then:
 
 ```bash
-bash start-mac.sh
-# optional: specify a device
+# Install dependencies (root level)
+npm install
+
+# Start the agent (runs from root, executes mac-agent/agent.js)
+npm start
+```
+
+Or to specify a device name, run `start-mac.sh` directly:
+
+```bash
 bash start-mac.sh "iPhone 16"
 ```
 
-This will:
-- Install Node.js dependencies (first run only)
+This script will:
+- Check for Node.js and install dependencies
 - Boot the iOS Simulator
 - Start the streaming agent on port 9001
 
@@ -92,7 +100,17 @@ Edit the constants in `mac-agent/agent.js`:
 
 ---
 
-## Troubleshooting
+## Available npm Commands
+
+| Command | Purpose |
+|---------|---------|
+| `npm start` | Start the iOS Simulator streaming agent (production) |
+| `npm run dev` | Start with auto-reload on file changes (development) |
+| `npm run serve-client` | Start a local HTTP server for windows-client on port 8080 |
+| `npm run lint` | Run ESLint on mac-agent code |
+| `npm run format` | Format mac-agent code with Prettier |
+
+---
 
 | Problem | Fix |
 |---------|-----|

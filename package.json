@@ -1,0 +1,39 @@
+{
+  "name": "remote-ios-sim",
+  "version": "1.0.0",
+  "description": "Stream your iOS Simulator from macOS to a browser on Windows. Expo runs on Windows, the Mac runs the simulator and streams it back.",
+  "type": "module",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "start": "node mac-agent/agent.js",
+    "dev": "node --watch mac-agent/agent.js",
+    "setup": "npm install",
+    "serve-client": "http-server windows-client -p 8080 -c-1 -o",
+    "lint": "eslint mac-agent --ext .js",
+    "format": "prettier --write \"mac-agent/**/*.js\""
+  },
+  "keywords": [
+    "ios",
+    "simulator",
+    "websocket",
+    "streaming",
+    "expo",
+    "react-native",
+    "mac",
+    "windows"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "robotjs": "^0.6.0",
+    "sharp": "^0.33.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "http-server": "^14.1.1",
+    "prettier": "^3.2.5"
+  }
+}
