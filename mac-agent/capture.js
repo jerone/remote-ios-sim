@@ -3,11 +3,17 @@
  * Uses native macOS commands (screencapture, osascript) - no native dependencies required.
  */
 
-import { execSync } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import sharp from 'sharp';
+
+let ffmpegProcess = null;
+let ffmpegBuffer = Buffer.alloc(0);
+let latestLiveFrame = null;
+let activeStreamKey = null;
+let ffmpegUnavailable = false;
 
 /**
  * Find the frontmost iOS Simulator window using screencapture and osascript.
@@ -57,6 +63,141 @@ export function findSimulatorWindow() {
   }
 }
 
+function buildStreamKey(bounds, fps, quality) {
+  return [
+    Math.round(bounds.X),
+    Math.round(bounds.Y),
+    Math.round(bounds.Width),
+    Math.round(bounds.Height),
+    fps,
+    quality,
+  ].join(':');
+}
+
+function qualityToMjpegQ(quality) {
+  const clamped = Math.max(0.05, Math.min(1, quality));
+  return Math.max(2, Math.min(31, Math.round(31 - clamped * 29)));
+}
+
+function extractJpegFrames(buffer) {
+  const frames = [];
+  let offset = 0;
+
+  while (offset < buffer.length - 1) {
+    const start = buffer.indexOf(Buffer.from([0xff, 0xd8]), offset);
+    if (start === -1) break;
+
+    const end = buffer.indexOf(Buffer.from([0xff, 0xd9]), start + 2);
+    if (end === -1) break;
+
+    frames.push(buffer.slice(start, end + 2));
+    offset = end + 2;
+  }
+
+  return { frames, remainder: buffer.slice(offset) };
+}
+
+/**
+ * Start ffmpeg-based live capture for the simulator region.
+ * Returns true when capture process starts, false when unavailable.
+ */
+export function startLiveCapture(bounds, fps = 15, quality = 0.75) {
+  if (!bounds || ffmpegUnavailable) {
+    return false;
+  }
+
+  const streamKey = buildStreamKey(bounds, fps, quality);
+  if (ffmpegProcess && activeStreamKey === streamKey) {
+    return true;
+  }
+
+  stopLiveCapture();
+
+  const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
+  const ffmpegInput = process.env.FFMPEG_INPUT || '1:none';
+  const q = qualityToMjpegQ(quality);
+
+  const cropW = Math.max(10, Math.round(bounds.Width));
+  const cropH = Math.max(10, Math.round(bounds.Height));
+  const cropX = Math.max(0, Math.round(bounds.X));
+  const cropY = Math.max(0, Math.round(bounds.Y));
+
+  const args = [
+    '-loglevel',
+    'error',
+    '-f',
+    'avfoundation',
+    '-framerate',
+    String(Math.max(15, fps)),
+    '-i',
+    ffmpegInput,
+    '-vf',
+    `crop=${cropW}:${cropH}:${cropX}:${cropY},fps=${fps}`,
+    '-an',
+    '-c:v',
+    'mjpeg',
+    '-q:v',
+    String(q),
+    '-f',
+    'image2pipe',
+    'pipe:1',
+  ];
+
+  try {
+    ffmpegProcess = spawn(ffmpegPath, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      ffmpegUnavailable = true;
+    }
+    ffmpegProcess = null;
+    return false;
+  }
+
+  ffmpegBuffer = Buffer.alloc(0);
+  latestLiveFrame = null;
+  activeStreamKey = streamKey;
+
+  ffmpegProcess.stdout.on('data', (chunk) => {
+    ffmpegBuffer = Buffer.concat([ffmpegBuffer, chunk]);
+    const { frames, remainder } = extractJpegFrames(ffmpegBuffer);
+    ffmpegBuffer = remainder;
+    if (frames.length > 0) {
+      latestLiveFrame = frames[frames.length - 1];
+    }
+  });
+
+  ffmpegProcess.on('error', (err) => {
+    if (err.code === 'ENOENT') {
+      ffmpegUnavailable = true;
+    }
+    stopLiveCapture();
+  });
+
+  ffmpegProcess.on('close', () => {
+    ffmpegProcess = null;
+    ffmpegBuffer = Buffer.alloc(0);
+    activeStreamKey = null;
+  });
+
+  return true;
+}
+
+export function getLatestLiveFrame() {
+  return latestLiveFrame;
+}
+
+export function stopLiveCapture() {
+  if (ffmpegProcess) {
+    ffmpegProcess.kill('SIGTERM');
+  }
+  ffmpegProcess = null;
+  ffmpegBuffer = Buffer.alloc(0);
+  activeStreamKey = null;
+  latestLiveFrame = null;
+}
+
 /**
  * Capture a JPEG frame of the iOS Simulator window.
  * Returns raw JPEG bytes, or null on failure.
@@ -64,11 +205,11 @@ export function findSimulatorWindow() {
 export async function captureFrame(windowId, quality = 0.7) {
   try {
     const tempDir = os.tmpdir();
-    const tempFile = path.join(tempDir, `sim-frame-${Date.now()}.png`);
+    const tempFile = path.join(tempDir, `sim-frame-${Date.now()}-${process.pid}.png`);
 
     // Use screencapture to capture the Simulator window
     try {
-      execSync(`screencapture -l ${1} -x -t png "${tempFile}" 2>/dev/null || true`, {
+      execSync(`screencapture -l ${windowId} -x -t png "${tempFile}" 2>/dev/null || true`, {
         timeout: 5000,
       });
     } catch (err) {
@@ -77,11 +218,7 @@ export async function captureFrame(windowId, quality = 0.7) {
     }
 
     // Check if file was created
-    if (!fs.existsSync(tempFile)) {
-      // Try alternative method: use system screenshot
-      execSync(`screenshot -x > /dev/null 2>&1 || true`);
-      return null;
-    }
+    if (!fs.existsSync(tempFile)) return null;
 
     // Convert PNG to JPEG with specified quality
     const jpegBuffer = await sharp(tempFile)

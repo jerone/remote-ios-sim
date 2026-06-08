@@ -23,7 +23,13 @@ import {
   rotateRight,
   shake,
 } from './actions.js';
-import { captureFrame, findSimulatorWindow } from './capture.js';
+import {
+  captureFrame,
+  findSimulatorWindow,
+  getLatestLiveFrame,
+  startLiveCapture,
+  stopLiveCapture,
+} from './capture.js';
 import { clickAt, drag, scrollAt } from './input_injector.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -50,6 +56,7 @@ async function frameStreamer(websocket, state) {
       const { windowId, bounds } = findSimulatorWindow();
 
       if (windowId === null) {
+        stopLiveCapture();
         try {
           websocket.send(
             JSON.stringify({
@@ -66,8 +73,12 @@ async function frameStreamer(websocket, state) {
       }
 
       state.bounds = bounds;
+      startLiveCapture(bounds, FPS, JPEG_QUALITY);
 
-      const frameBytes = await captureFrame(windowId, JPEG_QUALITY);
+      let frameBytes = getLatestLiveFrame();
+      if (!frameBytes) {
+        frameBytes = await captureFrame(windowId, JPEG_QUALITY);
+      }
       if (frameBytes) {
         const payload = JSON.stringify({
           type: 'frame',
@@ -161,6 +172,7 @@ async function handleConnection(websocket) {
   });
 
   websocket.on('close', () => {
+    stopLiveCapture();
     logger.info('Client disconnected');
   });
 
