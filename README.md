@@ -10,10 +10,10 @@ Windows PC                               macOS
 ──────────────────────                   ──────────────────────
 npx expo start                           start-mac.sh
   → Expo dev server                        → boots iOS Simulator
-  → open index.html                        → python3 agent.py
+  → open index.html                        → npm start (Node.js)
   → connect to Mac IP      ◄─ stream ─     → streams simulator window
   → paste exp:// URL       ── open ──►     → xcrun simctl openurl
-  → interact via browser   ◄─ JPEG/WS ─   → CGEventPost (input)
+  → interact via browser   ◄─ JPEG/WS ─   → robotjs (input events)
 ```
 
 ## Setup
@@ -29,7 +29,7 @@ bash start-mac.sh "iPhone 16"
 ```
 
 This will:
-- Install Python dependencies (first run only)
+- Install Node.js dependencies (first run only)
 - Boot the iOS Simulator
 - Start the streaming agent on port 9001
 
@@ -81,13 +81,14 @@ Open `windows-client/index.html` in any browser:
 
 ## Configuration
 
-Edit the top of `mac-agent/agent.py`:
+Edit the constants in `mac-agent/agent.js`:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `FPS` | 15 | Target frames per second |
 | `JPEG_QUALITY` | 0.75 | Frame quality (0.0–1.0) |
 | `PORT` | 9001 | WebSocket port |
+| `HOST` | 0.0.0.0 | Listening host |
 
 ---
 
@@ -96,8 +97,9 @@ Edit the top of `mac-agent/agent.py`:
 | Problem | Fix |
 |---------|-----|
 | "Waiting for iOS Simulator…" | Make sure Simulator is open and not minimized |
-| Screen Recording denied | System Settings → Privacy & Security → Screen Recording → allow Terminal / Python |
-| Can't connect from Windows | Check Mac firewall allows port 9081; verify IP address |
+| robotjs installation fails | Run `xcode-select --install`, then `npm cache clean --force`, then `npm install` |
+| screencapture: window not found | Ensure Simulator window is visible and not minimized |
+| Can't connect from Windows | Check Mac firewall allows port 9001; verify IP address |
 | Expo app doesn't load | Make sure Windows firewall allows port 8081; use the `exp://` LAN URL not localhost |
 | Shake doesn't open dev menu | Expo Go must be the running app (not a bare RN build) |
 

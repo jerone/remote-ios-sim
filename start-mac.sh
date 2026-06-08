@@ -12,18 +12,20 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-AGENT="$SCRIPT_DIR/mac-agent/agent.py"
+AGENT_DIR="$SCRIPT_DIR/mac-agent"
 DEVICE="${1:-iPhone 15}"
 
 # ── Check dependencies ────────────────────────────────────────────────────────
-if ! command -v python3 &>/dev/null; then
-  echo "❌  python3 not found. Install it with: brew install python"
+if ! command -v node &>/dev/null; then
+  echo "❌  node not found. Install it with: brew install node"
   exit 1
 fi
 
-if ! python3 -c "import websockets" &>/dev/null; then
+if [ ! -d "$AGENT_DIR/node_modules" ]; then
   echo "📦  Installing mac-agent dependencies…"
-  pip3 install -r "$SCRIPT_DIR/mac-agent/requirements.txt"
+  cd "$AGENT_DIR"
+  npm install
+  cd "$SCRIPT_DIR"
 fi
 
 # ── Boot simulator ────────────────────────────────────────────────────────────
@@ -51,4 +53,5 @@ echo ""
 # ── Start streaming agent ─────────────────────────────────────────────────────
 trap 'echo ""; echo "Stopping agent…"; exit 0' INT TERM
 
-python3 "$AGENT"
+cd "$AGENT_DIR"
+npm start
