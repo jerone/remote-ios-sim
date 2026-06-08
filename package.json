@@ -27,16 +27,18 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "robotjs": "^0.6.0",
+    "sharp": "^0.33.1",
+    "ws": "^8.17.0"
+  },
+  "optionalDependencies": {
     "ffi-napi": "^4.0.3",
     "ref-napi": "^3.0.3",
-    "ref-struct-di": "^1.1.1",
-    "robotjs": "^0.6.0",
-    "sharp": "^0.33.5",
-    "ws": "^9.2.0"
+    "ref-struct-di": "^1.1.1"
   },
   "devDependencies": {
-    "eslint": "^9.3.0",
-    "http-server": "^14.2.0",
-    "prettier": "^3.3.2"
+    "eslint": "^8.57.0",
+    "http-server": "^14.1.1",
+    "prettier": "^3.3.0"
   }
 }
