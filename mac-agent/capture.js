@@ -1,68 +1,16 @@
 /**
- * capture.js - Finds and captures the iOS Simulator window using macOS APIs.
- * Uses node-ffi to access Quartz framework functions.
+ * capture.js - Finds and captures the iOS Simulator window.
+ * Uses native macOS commands (screencapture, osascript) - no native dependencies required.
  */
 
-import ffi from 'ffi-napi';
-import ref from 'ref-napi';
-import Struct from 'ref-struct-di';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import sharp from 'sharp';
 
-// Types for Quartz
-const CGRect = Struct({
-  origin: Struct({
-    x: ref.types.double,
-    y: ref.types.double,
-  }),
-  size: Struct({
-    width: ref.types.double,
-    height: ref.types.double,
-  }),
-});
-
-const CGSize = Struct({
-  width: ref.types.double,
-  height: ref.types.double,
-});
-
-const CGPoint = Struct({
-  x: ref.types.double,
-  y: ref.types.double,
-});
-
-// Quartz Framework
-const Quartz = ffi.Library('CoreGraphics', {
-  CGWindowListCopyWindowInfo: [
-    ref.refType(ref.types.void),
-    ['uint32', 'uint32'],
-  ],
-  CGWindowListCreateImage: [
-    ref.refType(ref.types.void),
-    [CGRect, 'uint32', 'uint32', 'uint32'],
-  ],
-  CGRectNull: [CGRect, []],
-  CGRectZero: [CGRect, []],
-});
-
-// AppKit Framework
-const AppKit = ffi.Library('AppKit', {
-  NSImage: [ref.refType(ref.types.void), []],
-});
-
-// Constants
-const kCGWindowListOptionOnScreenOnly = 1;
-const kCGWindowListExcludeDesktopElements = 4;
-const kCGWindowListOptionIncludingWindow = 1;
-const kCGWindowImageBoundsIgnoreFraming = 1;
-const kCGWindowImageShouldBeOpaque = 4;
-const kCGNullWindowID = 0;
-
 /**
- * Find the frontmost iOS Simulator window using screencapture and image processing.
+ * Find the frontmost iOS Simulator window using screencapture and osascript.
  * Returns { windowId, bounds } or { windowId: null, bounds: null } if not found.
  */
 export function findSimulatorWindow() {
